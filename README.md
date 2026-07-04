@@ -2,7 +2,6 @@
 
 Sistema RAG adaptativo con **LangGraph**, **OpenAI** y **Tavily Search**, con backend (FastAPI) y frontend (Chat UI) incluidos.
 
-El agente decide dinámicamente si responder desde un vectorstore local o buscar en la web, evalúa sus propias respuestas (alucinación + relevancia) y reintenta antes de responder — con corte automático de reintentos para evitar loops infinitos.
 
 ---
 
@@ -28,8 +27,8 @@ pip install poetry
 
 ### 1. Clonar el repositorio
 ```bash
-git clone <URL_DE_TU_REPOSITORIO>
-cd GenAI-main
+git clone https://github.com/JeancarloJGCO/adaptive-rag-langgraph_.git
+cd adaptive-rag-langgraph_
 ```
 
 ### 2. Instalar dependencias
@@ -40,17 +39,17 @@ poetry install
 
 ### 3. Configurar las API keys
 
-**Windows (CMD):**
+** CMD **
 ```cmd
 cd Agent\Langgraph\Adaptive_rag
 copy .env.example .env
 notepad .env
 ```
 
-**Windows (PowerShell) / Linux / macOS:**
+** POWERSHELL **
 ```bash
 cd Agent/Langgraph/Adaptive_rag
-cp .env.example .env    # PowerShell: Copy-Item .env.example .env
+cp .env.example .env    
 ```
 
 Edita `.env` y coloca tus claves reales:
@@ -76,9 +75,7 @@ Abre en el navegador:
 http://localhost:8000
 ```
 
-Ahí verás la Chat UI completa (sidebar con chats temporales/permanentes). Un solo proceso sirve la API y el frontend — no hace falta levantar nada más.
-
-**Nota sobre el primer mensaje:** la primera vez que envíes una pregunta, el backend descarga y vectoriza los documentos fuente (LangGraph/LangChain docs) y guarda el índice en `src/retriever/faiss_index/`. Tarda más esa vez; los siguientes reinicios son instantáneos porque el índice queda persistido en disco.
+Ahí verás la Chat UI completa. Un solo proceso sirve la API y el frontend — no hace falta levantar nada más.
 
 Docs interactivos de la API (Swagger): `http://localhost:8000/docs`
 
@@ -87,7 +84,7 @@ Docs interactivos de la API (Swagger): `http://localhost:8000/docs`
 ## Estructura del proyecto
 
 ```
-GenAI-main/
+adaptive-rag-langgraph_/
 ├── pyproject.toml                    # Dependencias (Poetry)
 └── Agent/Langgraph/Adaptive_rag/
     ├── .env.example                  # Plantilla de variables de entorno
@@ -113,3 +110,4 @@ GenAI-main/
 ```bash
 poetry run pytest Agent/Langgraph/Adaptive_rag/tests/ -v
 ```
+
