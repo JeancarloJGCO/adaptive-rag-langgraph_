@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LangGraph Chat UI</title>
+<style>
+  :root {
+    --bg-sidebar: #f7f7f8;
+    --bg-main: #ffffff;
+    --border: #e5e5e7;
+    --text: #1a1a1a;
+    --text-muted: #6b7280;
+    --text-faint: #9ca3af;
+    --accent-red: #ef4444;
+    --accent-red-hover: #dc2626;
+    --bubble-user: #f0f0f2;
+    --bubble-assistant: #ffffff;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    color: var(--text);
+    background: var(--bg-main);
+  }
+  .app { display: flex; height: 100vh; }
+
+  /* ───── Sidebar ───── */
+  .sidebar {
+    width: 260px;
+    background: var(--bg-sidebar);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 16px 12px;
+    transition: width 0.2s ease, padding 0.2s ease;
+    overflow: hidden;
+  }
+  .sidebar.collapsed { width: 0; padding: 16px 0; }
+  .sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    padding: 0 4px;
+  }
+  .sidebar-title { display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 14px; color: var(--text-muted); white-space: nowrap; }
+  .collapse-btn {
+    background: none; border: none; cursor: pointer; color: var(--text-faint);
+    font-size: 16px; padding: 4px 8px; border-radius: 6px;
+  }
+  .collapse-btn:hover { background: #ececee; }
+
+  .btn {
+    width: 100%;
+    padding: 9px 12px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: #fff;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+    white-space: nowrap;
+  }
+  .btn:hover { background: #f0f0f2; }
+  .btn-temp { background: var(--accent-red); color: #fff; border: none; }
+  .btn-temp:hover { background: var(--accent-red-hover); }
+
+  .divider { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
+  .section-label { font-size: 11px; color: var(--text-faint); text-transform: none; padding: 0 4px; margin-bottom: 8px; }
+  .chat-list { flex: 1; overflow-y: auto; }
+  .chat-item {
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--text);
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 6px;
+  }
+  .chat-item:hover { background: #ececee; }
+  .chat-item.active { background: #e8e8ea; font-weight: 600; }
+  .chat-item .del-btn { opacity: 0; background: none; border: none; color: var(--text-faint); cursor: pointer; font-size: 13px; }
+  .chat-item:hover .del-btn { opacity: 1; }
+  .empty-hint { font-size: 12px; color: var(--text-faint); padding: 4px; }
+
+  /* ───── Main ───── */
+  .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  .topbar {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding: 14px 24px;
+    border-bottom: 1px solid transparent;
+    font-size: 13px;
+    color: var(--text-faint);
+    gap: 10px;
+  }
+  .topbar .sidebar-toggle-inline { display: none; cursor: pointer; color: var(--text-muted); }
+  .sidebar.collapsed ~ .main .sidebar-toggle-inline { display: inline; }
+
+  .chat-header { padding: 8px 32px 20px; }
+  .chat-header h1 { display: flex; align-items: center; gap: 10px; font-size: 26px; margin: 0 0 6px; }
+  .chat-header .meta { font-size: 12.5px; color: var(--text-faint); }
+  .chat-header .meta .session-id { color: #9ca3af; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .chat-header .meta .mode-temp { color: var(--accent-red); font-weight: 600; }
+  .chat-header .meta .mode-perm { color: #16a34a; font-weight: 600; }
+
+  .messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 32px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .msg { max-width: 70%; padding: 10px 14px; border-radius: 14px; font-size: 14.5px; line-height: 1.5; white-space: pre-wrap; }
+  .msg.user { align-self: flex-end; background: var(--bubble-user); }
+  .msg.assistant { align-self: flex-start; background: var(--bubble-assistant); border: 1px solid var(--border); }
+  .msg.thinking { color: var(--text-faint); font-style: italic; }
+
+  .composer {
+    padding: 16px 32px 24px;
+    border-top: 1px solid var(--border);
+  }
+  .composer-inner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg-sidebar);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 6px 6px 6px 18px;
+  }
+  .composer input {
+    flex: 1;
+    border: none;
+    background: none;
+    outline: none;
+    font-size: 14.5px;
+    padding: 8px 0;
+  }
+  .composer input::placeholder { color: var(--text-faint); }
+  .send-btn {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    border: none;
+    background: var(--text);
+    color: #fff;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .send-btn:disabled { background: #d1d5db; cursor: not-allowed; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-title">💬 Chats</div>
+      <button class="collapse-btn" id="collapseBtn" title="Colapsar">«</button>
+    </div>
+
+    <button class="btn" id="newPermanentBtn">🔒 New permanent</button>
+    <button class="btn btn-temp" id="newTemporaryBtn">⚡ Temporary chat</button>
+
+    <hr class="divider">
+    <div class="section-label">Saved (permanent)</div>
+    <div class="chat-list" id="chatList">
+      <div class="empty-hint">No permanent chats yet.</div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <span class="sidebar-toggle-inline" id="expandBtn">»</span>
+    </div>
+
+    <div class="chat-header">
+      <h1>💬 LangGraph Chat UI</h1>
+      <div class="meta" id="sessionMeta">Cargando sesión…</div>
+    </div>
+
+    <div class="messages" id="messages"></div>
+
+    <div class="composer">
+      <div class="composer-inner">
+        <input type="text" id="messageInput" placeholder="Type your message..." autocomplete="off">
+        <button class="send-btn" id="sendBtn" disabled>➤</button>
+      </div>
+    </div>
+  </main>
+
+</div>
+
+<script>
+const API = "";  // mismo origen (FastAPI sirve backend + frontend)
+
+let state = {
+  sessionId: null,
+  mode: "temporary",   // "temporary" | "permanent"
+  chats: [],
+};
+
+const el = {
+  sidebar: document.getElementById("sidebar"),
+  collapseBtn: document.getElementById("collapseBtn"),
+  expandBtn: document.getElementById("expandBtn"),
+  newPermanentBtn: document.getElementById("newPermanentBtn"),
+  newTemporaryBtn: document.getElementById("newTemporaryBtn"),
+  chatList: document.getElementById("chatList"),
+  sessionMeta: document.getElementById("sessionMeta"),
+  messages: document.getElementById("messages"),
+  messageInput: document.getElementById("messageInput"),
+  sendBtn: document.getElementById("sendBtn"),
+};
+
+// ───── Sidebar collapse ─────
+el.collapseBtn.onclick = () => el.sidebar.classList.add("collapsed");
+el.expandBtn.onclick = () => el.sidebar.classList.remove("collapsed");
+
+// ───── Helpers ─────
+function renderMeta() {
+  const modeLabel = state.mode === "temporary"
+    ? '⚡ Temporary chat · session_id: <span class="session-id">' + state.sessionId + '</span> · mode: <span class="mode-temp">temporary</span>'
+    : '🔒 Permanent chat · session_id: <span class="session-id">' + state.sessionId + '</span> · mode: <span class="mode-perm">permanent</span>';
+  el.sessionMeta.innerHTML = modeLabel;
+}
+
+function renderMessages(msgs) {
+  el.messages.innerHTML = "";
+  for (const m of msgs) {
+    const div = document.createElement("div");
+    div.className = "msg " + (m.role === "user" ? "user" : "assistant");
+    div.textContent = m.content;
+    el.messages.appendChild(div);
+  }
+  el.messages.scrollTop = el.messages.scrollHeight;
+}
+
+function addThinkingBubble() {
+  const div = document.createElement("div");
+  div.className = "msg assistant thinking";
+  div.id = "thinkingBubble";
+  div.textContent = "Pensando…";
+  el.messages.appendChild(div);
+  el.messages.scrollTop = el.messages.scrollHeight;
+}
+
+function removeThinkingBubble() {
+  const b = document.getElementById("thinkingBubble");
+  if (b) b.remove();
+}
+
+async function renderChatList() {
+  const res = await fetch(`${API}/api/chats`);
+  state.chats = await res.json();
+  el.chatList.innerHTML = "";
+  if (state.chats.length === 0) {
+    el.chatList.innerHTML = '<div class="empty-hint">No permanent chats yet.</div>';
+    return;
+  }
+  for (const chat of state.chats) {
+    const item = document.createElement("div");
+    item.className = "chat-item" + (chat.id === state.sessionId ? " active" : "");
+    item.innerHTML = `<span>${chat.title}</span><button class="del-btn" title="Eliminar">✕</button>`;
+    item.querySelector("span").onclick = () => openPermanentChat(chat.id);
+    item.querySelector(".del-btn").onclick = async (e) => {
+      e.stopPropagation();
+      await fetch(`${API}/api/chats/${chat.id}`, { method: "DELETE" });
+      if (chat.id === state.sessionId) await startTemporaryChat();
+      await renderChatList();
+    };
+    el.chatList.appendChild(item);
+  }
+}
+
+// ───── Sesiones ─────
+async function startTemporaryChat() {
+  const res = await fetch(`${API}/api/sessions/temporary`, { method: "POST" });
+  const data = await res.json();
+  state.sessionId = data.session_id;
+  state.mode = "temporary";
+  renderMeta();
+  renderMessages([]);
+  await renderChatList();
+}
+
+async function startPermanentChat() {
+  const res = await fetch(`${API}/api/chats`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ title: "Nuevo chat" }),
+  });
+  const chat = await res.json();
+  state.sessionId = chat.id;
+  state.mode = "permanent";
+  renderMeta();
+  renderMessages([]);
+  await renderChatList();
+}
+
+async function openPermanentChat(chatId) {
+  state.sessionId = chatId;
+  state.mode = "permanent";
+  renderMeta();
+  const res = await fetch(`${API}/api/chats/${chatId}/messages`);
+  const msgs = await res.json();
+  renderMessages(msgs);
+  await renderChatList();
+}
+
+// ───── Enviar mensaje ─────
+async function sendMessage() {
+  const text = el.messageInput.value.trim();
+  if (!text || !state.sessionId) return;
+
+  el.messageInput.value = "";
+  el.sendBtn.disabled = true;
+
+  const userBubble = document.createElement("div");
+  userBubble.className = "msg user";
+  userBubble.textContent = text;
+  el.messages.appendChild(userBubble);
+  el.messages.scrollTop = el.messages.scrollHeight;
+
+  addThinkingBubble();
+
+  try {
+    const res = await fetch(`${API}/api/message`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ session_id: state.sessionId, message: text, mode: state.mode }),
+    });
+    removeThinkingBubble();
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || "Error del servidor");
+    }
+
+    const data = await res.json();
+    const assistantBubble = document.createElement("div");
+    assistantBubble.className = "msg assistant";
+    assistantBubble.textContent = data.generation;
+    el.messages.appendChild(assistantBubble);
+    el.messages.scrollTop = el.messages.scrollHeight;
+
+    if (state.mode === "permanent") await renderChatList();
+  } catch (e) {
+    removeThinkingBubble();
+    const errBubble = document.createElement("div");
+    errBubble.className = "msg assistant";
+    errBubble.textContent = "⚠️ " + e.message;
+    el.messages.appendChild(errBubble);
+  } finally {
+    el.messageInput.focus();
+  }
+}
+
+el.messageInput.addEventListener("input", () => {
+  el.sendBtn.disabled = el.messageInput.value.trim().length === 0;
+});
+el.messageInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") sendMessage();
+});
+el.sendBtn.addEventListener("click", sendMessage);
+el.newPermanentBtn.addEventListener("click", startPermanentChat);
+el.newTemporaryBtn.addEventListener("click", startTemporaryChat);
+
+// ───── Init ─────
+(async function init() {
+  await renderChatList();
+  await startTemporaryChat();
+})();
+</script>
+</body>
+</html>

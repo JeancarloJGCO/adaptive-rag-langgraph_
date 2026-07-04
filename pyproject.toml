@@ -1,0 +1,32 @@
+[tool.poetry]
+name = "genai"
+version = "0.1.0"
+description = "Adaptive RAG con LangGraph, OpenAI y Tavily"
+authors = ["Jeancarlo <jeancarlocordova999@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.12,<=3.13"
+langgraph = "^0.2.43"
+langchain-openai = "^0.2.8"
+langchain-community = "^0.3.7"
+langchain-text-splitters = "^0.3.0"
+faiss-cpu = "^1.11.0"
+tavily-python = "^0.5.0"
+langchain-tavily = "^0.1.0"
+tiktoken = "^0.8.0"
+python-dotenv = "^1.0.1"
+pydantic = "^2.9.2"
+fastapi = "^0.115.0"
+uvicorn = "^0.32.0"
+beautifulsoup4 = "^4.12.3"
+rank-bm25 = "^0.2.2"
+langchain = "^0.3.7"
+requests = "^2.32.3"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.3"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
